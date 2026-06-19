@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+build-artifacts/
+*.log
+.env
+.env.local
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/settings.json
+.idea/
+*.iml
+coverage/

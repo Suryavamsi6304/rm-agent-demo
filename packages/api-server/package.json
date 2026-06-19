@@ -1,0 +1,21 @@
+{
+  "name": "@rm/api-server",
+  "version": "1.0.0",
+  "description": "RM Agent Lambda API Server",
+  "main": "dist/lambda.js",
+  "scripts": {
+    "build": "tsc",
+    "bundle": "tsc && node build-bundle.js",
+    "typecheck": "tsc --noEmit",
+    "dev": "ts-node src/lambda.ts"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.0",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "ts-node": "^10.9.0"
+  }
+}

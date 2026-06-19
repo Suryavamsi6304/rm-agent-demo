@@ -1,0 +1,31 @@
+{
+  "year": 2026,
+  "entries": [
+    { "date": "2026-01-15", "feasible": true, "reason": null },
+    { "date": "2026-02-14", "feasible": false, "reason": "Valentine's Day" },
+    { "date": "2026-03-17", "feasible": true, "reason": null },
+    { "date": "2026-04-10", "feasible": false, "reason": "Good Friday" },
+    { "date": "2026-05-25", "feasible": true, "reason": null },
+    { "date": "2026-06-02", "feasible": true, "reason": null },
+    { "date": "2026-07-04", "feasible": false, "reason": "Independence Day" },
+    { "date": "2026-08-15", "feasible": true, "reason": null },
+    { "date": "2026-09-07", "feasible": false, "reason": "Labor Day" },
+    { "date": "2026-10-31", "feasible": false, "reason": "Halloween" },
+    { "date": "2026-11-26", "feasible": false, "reason": "Thanksgiving" },
+    { "date": "2026-12-25", "feasible": false, "reason": "Christmas" },
+    { "date": "2026-01-20", "feasible": true, "reason": null },
+    { "date": "2026-02-16", "feasible": true, "reason": null },
+    { "date": "2026-03-20", "feasible": true, "reason": null },
+    { "date": "2026-04-22", "feasible": true, "reason": null },
+    { "date": "2026-05-01", "feasible": true, "reason": null },
+    { "date": "2026-06-21", "feasible": true, "reason": null },
+    { "date": "2026-07-14", "feasible": true, "reason": null },
+    { "date": "2026-08-10", "feasible": true, "reason": null },
+    { "date": "2026-09-21", "feasible": true, "reason": null },
+    { "date": "2026-10-12", "feasible": true, "reason": null },
+    { "date": "2026-11-11", "feasible": false, "reason": "Veterans Day" },
+    { "date": "2026-12-31", "feasible": true, "reason": null }
+  ],
+  "generated_at": "2026-06-19T00:00:00Z",
+  "total_entries": 132
+}

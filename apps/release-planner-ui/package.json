@@ -1,0 +1,7 @@
+{
+  "name": "release-planner-ui",
+  "version": "1.0.0",
+  "description": "Release Planner UI - React based web interface",
+  "private": true,
+  "main": "build/index.html"
+}
