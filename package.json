@@ -1,18 +1,27 @@
 {
-  "name": "rm-agent-demo",
-  "version": "1.0.0",
-  "description": "Demo project for RM Agent Jenkins pipeline testing",
+  "name": "release-management-ai-agents",
   "private": true,
+  "type": "module",
   "workspaces": [
-    "packages/*",
-    "apps/*"
+    "packages/*"
   ],
-  "scripts": {
-    "typecheck": "tsc --noEmit",
-    "install:all": "npm install",
-    "build:all": "npm --workspace @rm/api-server run build"
-  },
   "devDependencies": {
-    "typescript": "^5.3.0"
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.2",
+    "dotenv": "^16.4.5"
+  },
+  "scripts": {
+    "planner": "tsx scripts/run-planner.ts",
+    "planner:ai": "ENABLE_LLM=true tsx scripts/run-planner.ts",
+    "jira:versions": "tsx scripts/run-jira-versions.ts",
+    "api": "tsx packages/api-server/src/index.ts",
+    "api:dev": "tsx watch packages/api-server/src/index.ts",
+    "validate": "python packages/ai-engine/request_validator.py",
+    "typecheck": "tsc --noEmit",
+    "test:py": "pytest packages/ai-engine/tests/test_date_logic.py -v",
+    "test": "npm run typecheck && npm run test:py"
   }
 }
