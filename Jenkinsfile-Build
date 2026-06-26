@@ -41,7 +41,7 @@ pipeline {
             steps {
                 script {
                     env.ARTIFACT_VERSION = sh(script: "node -p \"require('./packages/api-server/package.json').version\"", returnStdout: true).trim()
-                    env.ARTIFACT_NAME = "${env.ARTIFACT_BASE_NAME}:${env.ARTIFACT_VERSION}:${env.BUILD_NUMBER}"
+                    env.ARTIFACT_NAME = "${env.ARTIFACT_BASE_NAME}:${env.ARTIFACT_VERSION}:B${env.BUILD_NUMBER}"
                     echo "Artifact name resolved as: ${env.ARTIFACT_NAME}"
                 }
             }
