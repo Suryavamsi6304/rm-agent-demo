@@ -1,0 +1,81 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'BUILD_ID', defaultValue: '', description: 'Build job number to deploy, for example: 10')
+    }
+
+    environment {
+        AWS_REGION = 'us-east-1'
+        S3_BUCKET = 'rm-planner-artifacts-810305107532'
+        PROD_LAMBDA = 'release-planner-api-prod'
+    }
+
+    stages {
+        stage('Validate Parameters') {
+            steps {
+                script {
+                    if (!params.BUILD_ID?.trim()) {
+                        error("BUILD_ID is required")
+                    }
+                }
+                echo "Preparing to deploy build ${params.BUILD_ID} to Prod"
+            }
+        }
+
+        stage('Approval') {
+            steps {
+                input message: "Deploy build ${params.BUILD_ID} to PROD?", ok: 'Deploy PROD'
+            }
+        }
+
+        stage('Deploy to Prod') {
+            steps {
+                withAWS(region: env.AWS_REGION, credentials: 'aws-credentials') {
+                    sh '''
+                        set -e
+
+                        S3_KEY="builds/${BUILD_ID}/lambda-build-${BUILD_ID}.zip"
+
+                        aws lambda update-function-code \
+                          --function-name "${PROD_LAMBDA}" \
+                          --s3-bucket "${S3_BUCKET}" \
+                          --s3-key "${S3_KEY}" \
+                          --region "${AWS_REGION}"
+
+                        echo "Prod deployment successful"
+                        echo "Artifact used: s3://${S3_BUCKET}/${S3_KEY}"
+                    '''
+                }
+            }
+        }
+
+        stage('Deployment Summary') {
+            steps {
+                sh '''
+                    echo "=== Prod Deployment Summary ===" > deploy-report.txt
+                    echo "Build ID: ${BUILD_ID}" >> deploy-report.txt
+                    echo "Environment: Prod" >> deploy-report.txt
+                    echo "Lambda: ${PROD_LAMBDA}" >> deploy-report.txt
+                    echo "Artifact: s3://${S3_BUCKET}/builds/${BUILD_ID}/lambda-build-${BUILD_ID}.zip" >> deploy-report.txt
+                    echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> deploy-report.txt
+
+                    cat deploy-report.txt
+                '''
+                archiveArtifacts artifacts: 'deploy-report.txt', allowEmptyArchive: true
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Prod deployment completed successfully for build ${params.BUILD_ID}"
+        }
+        failure {
+            echo "Prod deployment failed for build ${params.BUILD_ID}"
+        }
+        always {
+            cleanWs(deleteDirs: true, notFailBuild: true)
+        }
+    }
+}

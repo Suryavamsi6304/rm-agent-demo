@@ -1,0 +1,75 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'BUILD_ID', defaultValue: '', description: 'Build job number to deploy, for example: 10')
+    }
+
+    environment {
+        AWS_REGION = 'us-east-1'
+        S3_BUCKET = 'rm-planner-artifacts-810305107532'
+        NONPROD_LAMBDA = 'release-planner-api-nonprod'
+    }
+
+    stages {
+        stage('Validate Parameters') {
+            steps {
+                script {
+                    if (!params.BUILD_ID?.trim()) {
+                        error("BUILD_ID is required")
+                    }
+                }
+                echo "Deploying build ${params.BUILD_ID} to Non-Prod"
+            }
+        }
+
+        stage('Deploy to Non-Prod') {
+            steps {
+                withAWS(region: env.AWS_REGION, credentials: 'aws-credentials') {
+                    sh '''
+                        set -e
+
+                        S3_KEY="builds/${BUILD_ID}/lambda-build-${BUILD_ID}.zip"
+
+                        aws lambda update-function-code \
+                          --function-name "${NONPROD_LAMBDA}" \
+                          --s3-bucket "${S3_BUCKET}" \
+                          --s3-key "${S3_KEY}" \
+                          --region "${AWS_REGION}"
+
+                        echo "Non-Prod deployment successful"
+                        echo "Artifact used: s3://${S3_BUCKET}/${S3_KEY}"
+                    '''
+                }
+            }
+        }
+
+        stage('Deployment Summary') {
+            steps {
+                sh '''
+                    echo "=== Non-Prod Deployment Summary ===" > deploy-report.txt
+                    echo "Build ID: ${BUILD_ID}" >> deploy-report.txt
+                    echo "Environment: Non-Prod" >> deploy-report.txt
+                    echo "Lambda: ${NONPROD_LAMBDA}" >> deploy-report.txt
+                    echo "Artifact: s3://${S3_BUCKET}/builds/${BUILD_ID}/lambda-build-${BUILD_ID}.zip" >> deploy-report.txt
+                    echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> deploy-report.txt
+
+                    cat deploy-report.txt
+                '''
+                archiveArtifacts artifacts: 'deploy-report.txt', allowEmptyArchive: true
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Non-Prod deployment completed successfully for build ${params.BUILD_ID}"
+        }
+        failure {
+            echo "Non-Prod deployment failed for build ${params.BUILD_ID}"
+        }
+        always {
+            cleanWs(deleteDirs: true, notFailBuild: true)
+        }
+    }
+}
