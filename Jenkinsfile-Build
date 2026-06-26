@@ -118,11 +118,11 @@ pipeline {
         success {
             echo "Build completed successfully"
             echo "Artifact available at: s3://${S3_BUCKET}/${ARTIFACT_NAME}/lambda.zip"
-             build job: 'deploy-non-prod',
-              wait: false,
-              parameters: [
-                  string(name: 'BUILD_ID', value: "${env.BUILD_NUMBER}")
-              ]
+            // build job: 'deploy-non-prod',
+             // wait: false,
+             // parameters: [
+             //     string(name: 'BUILD_ID', value: "${env.BUILD_NUMBER}")
+              //]
         }
         failure {
             echo "Build failed"
