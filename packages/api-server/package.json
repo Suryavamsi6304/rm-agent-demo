@@ -1,6 +1,6 @@
 {
   "name": "@rm/api-server",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "RM Agent Lambda API Server",
   "main": "dist/lambda.js",
   "scripts": {

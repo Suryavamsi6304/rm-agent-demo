@@ -3,9 +3,8 @@ pipeline {
 
     environment {
         AWS_REGION = 'us-east-1'
-        S3_BUCKET = 'rm-planner-artifacts-810305107532'
-        S3_ARTIFACT_PATH = 'Digital-Snapshot-Local'
-        ARTIFACT_BASE_NAME = 'lambda'
+        S3_BUCKET = 'rm-planner-artifacts'
+        ARTIFACT_BASE_NAME = 'lambda.zip'
     }
 
     stages {
@@ -41,7 +40,7 @@ pipeline {
         stage('Prepare Artifact Metadata') {
             steps {
                 script {
-                    env.ARTIFACT_VERSION = sh(script: "node -p \"require('./package.json').version\"", returnStdout: true).trim()
+                    env.ARTIFACT_VERSION = sh(script: "node -p \"require('./packages/api-server/package.json').version\"", returnStdout: true).trim()
                     env.ARTIFACT_NAME = "${env.ARTIFACT_BASE_NAME}:${env.ARTIFACT_VERSION}:${env.BUILD_NUMBER}"
                     echo "Artifact name resolved as: ${env.ARTIFACT_NAME}"
                 }
@@ -73,10 +72,9 @@ pipeline {
             steps {
                 sh '''
                     mkdir -p build-artifacts
-                    cp packages/api-server/dist/lambda.zip build-artifacts/${ARTIFACT_NAME}
-                    cp generated-calendar-2026.json build-artifacts/
-                    cp package.json build-artifacts/
-                    if [ -f package-lock.json ]; then cp package-lock.json build-artifacts/; fi
+                    mkdir -p build-artifacts/${ARTIFACT_NAME}
+
+                    cp packages/api-server/dist/lambda.zip build-artifacts/${ARTIFACT_NAME}/lambda.zip
                 '''
             }
         }
@@ -85,17 +83,11 @@ pipeline {
             steps {
                 withAWS(region: env.AWS_REGION, credentials: 'aws-credentials') {
                     sh '''
-                        S3_UPLOAD_PATH="s3://${S3_BUCKET}/${S3_ARTIFACT_PATH}/"
+                        S3_UPLOAD_PATH="s3://${S3_BUCKET}/"
 
-                        aws s3 cp build-artifacts/ ${S3_UPLOAD_PATH} --recursive
+                        aws s3 cp build-artifacts/${ARTIFACT_NAME}/lambda.zip ${S3_UPLOAD_PATH}${ARTIFACT_NAME}/lambda.zip
 
-                        echo "BUILD_NUMBER=${BUILD_NUMBER}" > build-metadata.txt
-                        echo "BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> build-metadata.txt
-                        echo "GIT_COMMIT=${GIT_COMMIT}" >> build-metadata.txt
-                        echo "GIT_BRANCH=${GIT_BRANCH}" >> build-metadata.txt
-                        aws s3 cp build-metadata.txt ${S3_UPLOAD_PATH}
-
-                        echo "Artifacts uploaded to: ${S3_UPLOAD_PATH}"
+                        echo "Artifact uploaded to: ${S3_UPLOAD_PATH}${ARTIFACT_NAME}/lambda.zip"
                     '''
                 }
             }
@@ -109,15 +101,15 @@ pipeline {
                     echo "Build Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> build-report.txt
                     echo "Git Commit: ${GIT_COMMIT}" >> build-report.txt
                     echo "Git Branch: ${GIT_BRANCH}" >> build-report.txt
-                    echo "Lambda Artifact: ${ARTIFACT_NAME}" >> build-report.txt
-                    echo "S3 Location: s3://${S3_BUCKET}/${S3_ARTIFACT_PATH}/${ARTIFACT_NAME}" >> build-report.txt
+                    echo "Lambda Artifact Folder: ${ARTIFACT_NAME}" >> build-report.txt
+                    echo "S3 Location: s3://${S3_BUCKET}/${ARTIFACT_NAME}/lambda.zip" >> build-report.txt
                     echo "" >> build-report.txt
                     echo "=== Artifact Details ===" >> build-report.txt
-                    ls -lh build-artifacts/ >> build-report.txt
+                    ls -lh build-artifacts/${ARTIFACT_NAME}/ >> build-report.txt
 
                     cat build-report.txt
                 '''
-                archiveArtifacts artifacts: 'build-report.txt', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'build-report.txt, packages/api-server/dist/lambda.zip', allowEmptyArchive: true
             }
         }
     }
@@ -125,7 +117,7 @@ pipeline {
     post {
         success {
             echo "Build completed successfully"
-            echo "Artifact available at: s3://${S3_BUCKET}/${S3_ARTIFACT_PATH}/${ARTIFACT_NAME}"
+            echo "Artifact available at: s3://${S3_BUCKET}/${ARTIFACT_NAME}/lambda.zip"
              build job: 'deploy-non-prod',
               wait: false,
               parameters: [
