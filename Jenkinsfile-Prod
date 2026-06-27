@@ -39,7 +39,8 @@ pipeline {
                     sh '''
                         set -e
 
-                                                S3_KEY="builds/${VERSION}/${BUILD_ID}/lambda.zip"
+                        ARTIFACT_NAME="lambda.zip:${VERSION}:B${BUILD_ID}"
+                        S3_KEY="${ARTIFACT_NAME}/lambda.zip"
 
                         aws lambda update-function-code \
                           --function-name "${PROD_LAMBDA}" \
@@ -57,12 +58,14 @@ pipeline {
         stage('Deployment Summary') {
             steps {
                 sh '''
+                    ARTIFACT_NAME="lambda.zip:${VERSION}:B${BUILD_ID}"
+
                     echo "=== Prod Deployment Summary ===" > deploy-report.txt
                     echo "Version: ${VERSION}" >> deploy-report.txt
                     echo "Build ID: ${BUILD_ID}" >> deploy-report.txt
                     echo "Environment: Prod" >> deploy-report.txt
                     echo "Lambda: ${PROD_LAMBDA}" >> deploy-report.txt
-                    echo "Artifact: s3://${S3_BUCKET}/builds/${VERSION}/${BUILD_ID}/lambda.zip" >> deploy-report.txt
+                    echo "Artifact: s3://${S3_BUCKET}/${ARTIFACT_NAME}/lambda.zip" >> deploy-report.txt
                     echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> deploy-report.txt
 
                     cat deploy-report.txt
