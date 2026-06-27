@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     parameters {
+        string(name: 'VERSION', defaultValue: '', description: 'Release version to deploy, for example: 1.2.0')
         string(name: 'BUILD_ID', defaultValue: '', description: 'Build job number to deploy, for example: 10')
     }
 
@@ -15,17 +16,20 @@ pipeline {
         stage('Validate Parameters') {
             steps {
                 script {
+                    if (!params.VERSION?.trim()) {
+                        error("VERSION is required")
+                    }
                     if (!params.BUILD_ID?.trim()) {
                         error("BUILD_ID is required")
                     }
                 }
-                echo "Preparing to deploy build ${params.BUILD_ID} to Prod"
+                echo "Preparing to deploy VERSION=${params.VERSION}, BUILD_ID=${params.BUILD_ID} to Prod"
             }
         }
 
         stage('Approval') {
             steps {
-                input message: "Deploy build ${params.BUILD_ID} to PROD?", ok: 'Deploy PROD'
+                input message: "Deploy VERSION=${params.VERSION}, BUILD_ID=${params.BUILD_ID} to PROD?", ok: 'Deploy PROD'
             }
         }
 
@@ -35,7 +39,7 @@ pipeline {
                     sh '''
                         set -e
 
-                        S3_KEY="builds/${BUILD_ID}/lambda-build-${BUILD_ID}.zip"
+                                                S3_KEY="builds/${VERSION}/${BUILD_ID}/lambda.zip"
 
                         aws lambda update-function-code \
                           --function-name "${PROD_LAMBDA}" \
@@ -54,10 +58,11 @@ pipeline {
             steps {
                 sh '''
                     echo "=== Prod Deployment Summary ===" > deploy-report.txt
+                    echo "Version: ${VERSION}" >> deploy-report.txt
                     echo "Build ID: ${BUILD_ID}" >> deploy-report.txt
                     echo "Environment: Prod" >> deploy-report.txt
                     echo "Lambda: ${PROD_LAMBDA}" >> deploy-report.txt
-                    echo "Artifact: s3://${S3_BUCKET}/builds/${BUILD_ID}/lambda-build-${BUILD_ID}.zip" >> deploy-report.txt
+                    echo "Artifact: s3://${S3_BUCKET}/builds/${VERSION}/${BUILD_ID}/lambda.zip" >> deploy-report.txt
                     echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> deploy-report.txt
 
                     cat deploy-report.txt
@@ -69,10 +74,10 @@ pipeline {
 
     post {
         success {
-            echo "Prod deployment completed successfully for build ${params.BUILD_ID}"
+            echo "Prod deployment completed successfully for VERSION=${params.VERSION}, BUILD_ID=${params.BUILD_ID}"
         }
         failure {
-            echo "Prod deployment failed for build ${params.BUILD_ID}"
+            echo "Prod deployment failed for VERSION=${params.VERSION}, BUILD_ID=${params.BUILD_ID}"
         }
         always {
             cleanWs(deleteDirs: true, notFailBuild: true)
