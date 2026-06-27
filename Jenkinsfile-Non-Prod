@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         AWS_REGION = 'us-east-1'
-        S3_BUCKET = 'rm-planner-artifacts-810305107532'
+        S3_BUCKET = 'rm-planner-artifacts'
         NONPROD_LAMBDA = 'release-planner-api-nonprod'
     }
 
