@@ -1,22 +1,29 @@
 pipeline {
     agent any
 
+    parameters {
+        string(name: 'BRANCH_NAME', defaultValue: 'main', description: 'Git branch to build')
+        string(name: 'VERSION', defaultValue: 'latest', description: 'Docker image tag')
+    }
+
     environment {
         AWS_REGION = 'us-east-1'
-        ECR_REPOSITORY = 'rm-planner-api'
+        ECR_REPOSITORY = 'rm-agent'
+        IMAGE_TAG = "${params.VERSION}"
     }
 
     stages {
         stage('Checkout') {
             steps {
                 echo "Checking out repository..."
-                git branch: 'main', url: 'https://github.com/Suryavamsi6304/rm-agent-demo.git'
+                git branch: "${params.BRANCH_NAME}", url: 'https://github.com/Suryavamsi6304/rm-agent-demo.git'
             }
         }
 
         stage('Install Dependencies') {
             steps {
                 sh '''
+                npm config set registry https://registry.npmjs.org/
                 npm ci --no-audit --no-fund
                 '''
             }
@@ -25,16 +32,6 @@ pipeline {
         stage('TypeCheck') {
             steps {
                 sh 'npm run typecheck'
-            }
-        }
-
-        stage('Prepare Artifact Metadata') {
-            steps {
-                script {
-                    env.ARTIFACT_VERSION = sh(script: "node -p \"require('./packages/api-server/package.json').version\"", returnStdout: true).trim()
-                    env.IMAGE_TAG = "${env.ARTIFACT_VERSION}-B${env.BUILD_NUMBER}"
-                    echo "Docker image tag resolved as: ${env.IMAGE_TAG}"
-                }
             }
         }
 
@@ -77,6 +74,7 @@ pipeline {
                 }
             }
         }
+    }
 
     post {
         success {

@@ -2,14 +2,14 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'VERSION', defaultValue: '', description: 'Release version to deploy, for example: 1.2.0')
-        string(name: 'BUILD_ID', defaultValue: '', description: 'Build job number to deploy, for example: 10')
+        string(name: 'VERSION', defaultValue: '', description: 'Docker image tag to deploy, for example: 1.2.0-B10')
     }
 
     environment {
         AWS_REGION = 'us-east-1'
-        S3_BUCKET = 'rm-planner-artifacts'
-        PROD_LAMBDA = 'release-planner-api-prod'
+        ECR_REPOSITORY = 'rm-agent'
+        PROD_LAMBDA = 'release-agent-prod'
+        IMAGE_TAG = "${params.VERSION}"
     }
 
     stages {
@@ -19,17 +19,8 @@ pipeline {
                     if (!params.VERSION?.trim()) {
                         error("VERSION is required")
                     }
-                    if (!params.BUILD_ID?.trim()) {
-                        error("BUILD_ID is required")
-                    }
                 }
-                echo "Preparing to deploy VERSION=${params.VERSION}, BUILD_ID=${params.BUILD_ID} to Prod"
-            }
-        }
-
-        stage('Approval') {
-            steps {
-                input message: "Deploy VERSION=${params.VERSION}, BUILD_ID=${params.BUILD_ID} to PROD?", ok: 'Deploy PROD'
+                echo "Preparing to deploy image tag VERSION=${env.IMAGE_TAG} to Prod"
             }
         }
 
@@ -39,17 +30,17 @@ pipeline {
                     sh '''
                         set -e
 
-                        ARTIFACT_NAME="lambda.zip:${VERSION}:B${BUILD_ID}"
-                        S3_KEY="${ARTIFACT_NAME}/lambda.zip"
+                        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+                        ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                        IMAGE_URI=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
 
                         aws lambda update-function-code \
                           --function-name "${PROD_LAMBDA}" \
-                          --s3-bucket "${S3_BUCKET}" \
-                          --s3-key "${S3_KEY}" \
+                          --image-uri "${IMAGE_URI}" \
                           --region "${AWS_REGION}"
 
                         echo "Prod deployment successful"
-                        echo "Artifact used: s3://${S3_BUCKET}/${S3_KEY}"
+                        echo "Image used: ${IMAGE_URI}"
                     '''
                 }
             }
@@ -58,14 +49,15 @@ pipeline {
         stage('Deployment Summary') {
             steps {
                 sh '''
-                    ARTIFACT_NAME="lambda.zip:${VERSION}:B${BUILD_ID}"
+                    AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+                    ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                    IMAGE_URI=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
 
                     echo "=== Prod Deployment Summary ===" > deploy-report.txt
-                    echo "Version: ${VERSION}" >> deploy-report.txt
-                    echo "Build ID: ${BUILD_ID}" >> deploy-report.txt
+                    echo "Version: ${IMAGE_TAG}" >> deploy-report.txt
                     echo "Environment: Prod" >> deploy-report.txt
                     echo "Lambda: ${PROD_LAMBDA}" >> deploy-report.txt
-                    echo "Artifact: s3://${S3_BUCKET}/${ARTIFACT_NAME}/lambda.zip" >> deploy-report.txt
+                    echo "Image URI: ${IMAGE_URI}" >> deploy-report.txt
                     echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> deploy-report.txt
 
                     cat deploy-report.txt
@@ -77,10 +69,10 @@ pipeline {
 
     post {
         success {
-            echo "Prod deployment completed successfully for VERSION=${params.VERSION}, BUILD_ID=${params.BUILD_ID}"
+            echo "Prod deployment completed successfully for VERSION=${env.IMAGE_TAG}"
         }
         failure {
-            echo "Prod deployment failed for VERSION=${params.VERSION}, BUILD_ID=${params.BUILD_ID}"
+            echo "Prod deployment failed for VERSION=${env.IMAGE_TAG}"
         }
         always {
             cleanWs(deleteDirs: true, notFailBuild: true)
