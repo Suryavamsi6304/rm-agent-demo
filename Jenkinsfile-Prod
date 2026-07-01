@@ -26,13 +26,26 @@ pipeline {
 
         stage('Deploy to Prod') {
             steps {
-                withAWS(region: env.AWS_REGION, credentials: 'aws-credentials') {
+                withAWS(region: env.AWS_REGION, credentials: '099771438025') {
                     sh '''
                         set -e
 
                         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
                         ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
                         IMAGE_URI=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+
+                                                PACKAGE_TYPE=$(aws lambda get-function \
+                                                    --function-name "${PROD_LAMBDA}" \
+                                                    --region "${AWS_REGION}" \
+                                                    --query 'Configuration.PackageType' \
+                                                    --output text)
+
+                                                if [ "${PACKAGE_TYPE}" != "Image" ]; then
+                                                    echo "Deployment blocked: ${PROD_LAMBDA} package type is ${PACKAGE_TYPE}."
+                                                    echo "This pipeline deploys ECR images only. Create/use an Image-type Lambda function."
+                                                    exit 1
+                                                fi
+
 
                         aws lambda update-function-code \
                           --function-name "${PROD_LAMBDA}" \
