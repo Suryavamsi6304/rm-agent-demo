@@ -10,8 +10,6 @@ WORKDIR /build
 # Copy lockfile + every workspace manifest first so `npm ci` is cached
 COPY package.json package-lock.json ./
 COPY packages/api-server/package.json   packages/api-server/package.json
-COPY packages/ai-engine/package.json    packages/ai-engine/package.json
-COPY packages/jira-client/package.json  packages/jira-client/package.json
 
 RUN npm ci --no-audit --no-fund
 
